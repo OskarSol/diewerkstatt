@@ -1,6 +1,7 @@
+import {ROOMS,PORTALS,officePoint,zoneAt} from './layout.js';
 import { buildLibrary } from './library-room.js';
 import { AGENT_DOCKS, projectRoom, STATUS_LABELS } from './agents-model.js';
-import { moveCompanion } from './movement.js';
+import { moveCompanion,findPath } from './movement.js';
 // Retained 3D brick geometry projected onto a resolution-independent canvas.
 // The moulded edges and studs are part of each brick, including moving actors.
 export function createBrickWorld({canvas,room,state,selectProject,toast,onZone,agents,wiki}) {
@@ -65,14 +66,14 @@ export function createBrickWorld({canvas,room,state,selectProject,toast,onZone,a
   }
   // A 34 × 25 unit cutaway hall: twice the original usable floor area.
   baseLayer=0;
-  box(-5,-.4,-1,34,.7,25,'#53677f',-2,false);
+  box(-5,-.4,-1,34,.7,25,'#a9bac5',-2,false);
   for(let x=-21.75;x<12;x+=1.5)for(let z=-13;z<11.2;z+=1.5){
-    flat(x,.012,z,1.47,1.47,noise(x,z)>.55?'#b6c2cc':'#aab9c7');
-    for(const dx of [-.36,.36])for(const dz of [-.36,.36])stud(x+dx,.02,z+dz,.19,'#b7c3ce',0);
+    flat(x,.012,z,1.47,1.47,noise(x,z)>.55?'#e0e8ed':'#d4e0e7');
+    for(const dx of [-.36,.36])for(const dz of [-.36,.36])stud(x+dx,.02,z+dz,.19,'#e7edf0',0);
   }
   // Smooth service bays inset in the studded baseplate.
   for(const x of [-13.5,-3.8,5.6]){
-    flat(x,.09,2.6,6.9,10.4,'#8195a9',.1);
+    flat(x,.09,2.6,6.9,10.4,'#b3cbd9',.1);
     for(const dx of [-3.35,3.35])flat(x+dx,.10,2.6,.12,10.4,'#ffcb34',.1);
     flat(x,.11,7.8,6.8,.12,'#ffcb34',.1);
     for(let z=-2.1;z<7.7;z+=.6)flat(x-3.05,.11,z,.35,.25,'#f3d87a',.1);
@@ -80,12 +81,13 @@ export function createBrickWorld({canvas,room,state,selectProject,toast,onZone,a
   baseLayer=1;
   // Individual offset masonry courses, with exposed studs along the top.
   for(let row=0;row<3;row++)for(let x=-21.5;x<12;x+=1.5){
-    box(x, .43+row*.8,-13.15,1.47,.76,.66,row===0?'#344a65':'#536d88',1,row===2);
+    if(Math.abs(x-4.9)<3)continue;
+    box(x, .43+row*.8,-13.15,1.47,.76,.66,row===0?'#8aaaba':'#a7c6d1',1,row===2);
   }
   for(let row=0;row<9;row++)for(let z=-12.7;z<2.8;z+=1.5){
-    box(-21.95,.43+row*.8,z,.65,.76,1.47,row<3?'#536d88':row===7?'#ffc62e':'#d5e0e9',1,row===8);
+    box(-21.95,.43+row*.8,z,.65,.76,1.47,row<3?'#a7c6d1':row===7?'#ffc62e':'#d5e0e9',1,row===8);
   }
-  for(const x of [-19.1,-13.1,-7.1,-1.1,4.9,10.2]){
+  for(const x of [-19.1,-13.1,-7.1,-1.1,10.2]){
     box(x,4.42,-13.12,4.5,3.85,.32,'#263e59',1,false);
     box(x,4.44,-12.91,4.2,3.52,.075,'#8ecde7',1,false);
     box(x-.75,4.44,-12.85,.105,3.56,.12,'#e4edf1',1,false);
@@ -110,14 +112,6 @@ export function createBrickWorld({canvas,room,state,selectProject,toast,onZone,a
     box(x,6.12,-8.85,4.6,.22,.68,'#385168',1);
     box(x,5.985,-8.85,4.33,.04,.55,'#fff5c9',1,false);
   }
-  // The doorway belongs to the side wall and shares furniture depth sorting.
-  for(let z=-11.5;z<.1;z+=1.5)for(let row=0;row<2;row++)box(11.6,.44+row*.8,z,.6,.75,1.46,'#657d91',2,row===1);
-  for(let z=6.05;z<10.7;z+=1.5)for(let row=0;row<2;row++)box(11.6,.44+row*.8,z,.6,.75,1.46,'#657d91',2,row===1);
-  box(11.6,2.25,.3,.65,4.5,.65,'#ffc52d',2);
-  box(11.6,2.25,5.0,.65,4.5,.65,'#ffc52d',2);
-  box(11.6,4.62,2.65,.7,.32,5.35,'#f6c233',2);
-  flat(11.65,.13,2.65,1.3,4.05,'#f1ca56',.15);
-  flat(9.5,.14,2.65,3.1,3.35,'#bdcbd2',.15);
   baseLayer=2;
   // Tools and storage stay in the hall; the four digital projects move next door.
   bench(-16,-9.8,7.2);
@@ -152,36 +146,27 @@ export function createBrickWorld({canvas,room,state,selectProject,toast,onZone,a
     for(const dx of [-.65,.65])box(x+dx,.11,-3.8,.22,.22,.54,'#293847');
   }
   // Low front border leaves the big open floor visible.
-  for(let x=-21;x<-16;x+=1.5)box(x,.43,10.85,1.46,.74,.65,'#536f88');
+  for(let x=-21;x<-16;x+=1.5)box(x,.43,10.85,1.46,.74,.65,'#b3ccd4');
   plant(-18,8.8,1.2);plant(9,-8.6,1.2);
   // A separate office, joined to the hall by a short walk-through passage.
+  group(31.5,0,-27,0,()=>{
   baseLayer=0;
-  box(-36.5,-.4,-1,25,.7,25,'#38546b',-2,false);
-  for(let x=-48.4;x<-24;x+=1.2)for(let z=-12.6;z<11;z+=1.2){
-    flat(x,.015,z,1.17,1.17,(Math.round((x+48.4)/1.2)%2)?'#c5ad87':'#bfa27a');
-    stud(x,.025,z,.16,'#cbb28c',0);
+  box(-36.5,-.4,-1,34,.7,25,'#a8c1cd',-2,false);
+  for(let x=-52.9;x<-20;x+=1.2)for(let z=-12.6;z<11;z+=1.2){
+    flat(x,.015,z,1.17,1.17,(Math.round((x+48.4)/1.2)%2)?'#ecdbb9':'#e5cfa8');
+    stud(x,.025,z,.16,'#f3e1be',0);
   }
-  box(-22.9,-.25,6.2,3.2,.43,4.1,'#526b83',-1,false);
-  flat(-22.9,.015,6.2,3.25,3.8,'#d6c49c',0);
   baseLayer=1;
   // Tall rear windows and a blue wall distinguish the quieter office.
-  for(let row=0;row<3;row++)for(let x=-48.2;x<-24;x+=1.5)box(x,.44+row*.76,-13.1,1.47,.72,.55,'#386680',1,row===2);
+  for(let row=0;row<3;row++)for(let x=-52.7;x<-20;x+=1.5)box(x,.44+row*.76,-13.1,1.47,.72,.55,'#a8cdd7',1,row===2);
   for(const x of [-45.5,-39.8,-34.1,-28.4]){
     box(x,4.0,-13.1,5,3.15,.28,'#24455d',1,false);
     box(x,4.0,-12.91,4.65,2.85,.06,'#a8ddec',1,false);
     box(x,4.0,-12.84,.12,2.95,.12,'#f0f0df',1,false);
     box(x,2.4,-12.75,5.1,.15,.6,'#ecefdd',1);
   }
-  for(let x=-48.2;x<-24;x+=1.5)box(x,5.85,-13.1,1.47,.6,.6,'#e8efe8',1);
-  for(let z=-12.7;z<3;z+=1.5)for(let row=0;row<7;row++)box(-48.8,.43+row*.78,z,.6,.74,1.47,row===6?'#77c3c8':'#e0e8e3',1,row===6);
-  // The office doorway and its matching hall-side opening share floor depth.
+  for(let x=-52.7;x<-20;x+=1.5)box(x,5.85,-13.1,1.47,.6,.6,'#e8efe8',1);
   baseLayer=2;
-  for(const x of [-24,-21.8]){
-    for(const z of [3.8,8.6])box(x,2.2,z,.45,4.4,.48,'#72bec7');
-    box(x,4.48,6.2,.5,.24,5.25,'#a2d9d9');
-  }
-  for(let z=-11.8;z<3;z+=1.5)box(-24,.43,z,.48,.75,1.46,'#698d9e');
-  box(-24,.43,10,.48,.75,2,'#698d9e');
   function officeDesk(x,z,color){
     flat(x,.05,z+.55,7,4.8,color,.1,.38);
     box(x,1.65,z,5.4,.2,2,'#e0ba7a');
@@ -206,11 +191,12 @@ export function createBrickWorld({canvas,room,state,selectProject,toast,onZone,a
   for(const x of [-46.35,-42.05])box(x,1.07,7.6,.32,.65,1.6,'#78aabb');
   box(-44.2,.56,5.4,2.8,.16,1.3,'#d7b579');plant(-44.4,5.4,.3,null,.66);
   plant(-26.2,-11.4,1.05);plant(-47,9.5,.9);
+  });
   buildLibrary({box,flat,stud,plant,disk,group});
   // A connected outdoor world: timber deck, pergola, pool and planting beds.
   baseLayer=0;
-  box(28.3,-.36,2.3,33.4,.58,23.6,'#348743',-2);
-  for(let x=12;x<45;x+=1)for(let z=-9;z<14;z+=1){flat(x,.02,z,.985,.985,noise(x,z)>.5?'#64b34a':'#5aab43');stud(x,.035,z,.23,'#63b448',0);}
+  box(32,-.36,-14,36,.58,56,'#61a95d',-2,false);
+  for(let x=14.7;x<50;x+=1.4)for(let z=-41.3;z<14;z+=1.4){flat(x,.02,z,1.38,1.38,noise(x,z)>.5?'#93ce70':'#8bc667');stud(x,.035,z,.23,'#a0d77d',0);}
   for(let x=11.5;x<21;x+=1.05)for(let z=2.3;z<4;z+=1.05)flat(x,.05,z,.95,.94,'#c1c4a2');
   box(18.6,.18,-4.1,8.2,.34,7.0,palette.wood,0);for(let z=-7.5;z<-.55;z+=.35)flat(18.6,.36,z,8.1,.026,'#987149');
   baseLayer=2;
@@ -230,9 +216,7 @@ export function createBrickWorld({canvas,room,state,selectProject,toast,onZone,a
   for(let z of [5.8,8.0]){box(30.5,.45,z,2.65,.19,.89,'#d5cfaa');box(31.45,.8,z,.6,.67,.89,'#d5cfaa');for(let x of [29.45,31.4])box(x,.2,z,.08,.4,.75,palette.wood);}
   bench(17,1.05,3.1);plant(16.45,.96,.35,'#d3b784',1.7);plant(17.4,1.05,.42,null,1.7);box(18.25,1.86,1.05,.38,.29,.32,'#9ea987');
   for(let z of [5.55,8.2]){box(17.35,.39,z,4.65,.76,1.68,'#96754c');flat(17.35,.79,z,4.4,1.4,palette.soil,2);for(let x=15.6;x<19.2;x+=.6){box(x,.94,z,.33,.32,.48,'#6f9f51');box(x,1.07,z,.25,.17,.26,'#90b965');}}
-  for(let x=13;x<45;x+=1.5){box(x,1,-9.0,.1,2.0,.1,'#8a7751');box(x,1.29,-9.0,1.38,.54,.08,'#ab986c');box(x,.56,-9.0,1.38,.48,.08,'#ab986c');}
-  for(let z=-8.5;z<14;z+=1.5){box(44.7,1,z,.1,2,.1,'#8a7751');box(44.7,1.29,z,.08,.54,1.38,'#ab986c');box(44.7,.56,z,.08,.48,1.38,'#ab986c');}
-  tree(31.8,-5.9,1.15);tree(35.0,6.7,.9);tree(13.2,-8.0,.8);
+  tree(31.8,-5.9,1.15);tree(35.0,6.7,.9);tree(15.1,-9.7,.8);
   for(let i=0;i<7;i++)plant(24+i*1.25,-7.45,.57,i%2?'#c99dbe':'#e5d19b');
   for(let i=0;i<5;i++){box(34.2,.42,-2.3+i*1.4,1.0,.83,.92,'#73984f');box(34.25,.91,-2.3+i*1.4,.65,.34,.6,i%2?'#c4a6cc':'#dcba9a');}
   // Two roomy studded kennels in the enlarged garden, doors facing the lawn.
@@ -252,23 +236,41 @@ export function createBrickWorld({canvas,room,state,selectProject,toast,onZone,a
   }
   kennel(39,-4,'#e8bd60');kennel(39,3,'#7dbac3');
   tree(43,11,.95);tree(43,-7,.8);
+  for(let z=-39;z<12;z+=1.05)flat(24,.055,z,2.2,.96,'#e6dfc6',.15);
+  for(let x=14;x<46;x+=1.05)flat(x,.06,-20.8,.96,2.3,'#e6dfc6',.15);
+  for(const z of [-35,-28]){box(41.5,.35,z,8.2,.65,2.2,'#c4a875',2);flat(41.5,.7,z,7.9,1.95,'#71543b',2);for(let x=38;x<46;x+=1)plant(x,z,.58,z===-35?'#f3c759':'#caa4dc',.73);}
+  for(const z of [-37,-31]){box(19.5,.35,z,5,.65,2.1,'#d3b17f',2);for(let x=18;x<22;x+=.8)plant(x,z,.55,'#f3b2bc',.7);}
+  box(30,.16,-30,8,.3,8,'#bda073',0);for(let z=-33.8;z<-26;z+=.45)flat(30,.32,z,7.9,.026,'#d5bd91',.1);
+  for(const x of [26.5,33.5])for(const z of [-33.5,-26.5])box(x,2.15,z,.2,4.0,.2,'#d3b783',2);
+  for(let z=-33.7;z<-26;z+=.85)box(30,4.2,z,7.7,.16,.2,'#e9cea0',2);
+  bench(30,-29.4,3.8);plant(30,-29.4,.4,null,1.7);
+  for(const z of [-31,-27.8])box(30,.62,z,4,.2,.65,'#e6cca1',2);
+  for(const [x,z,k] of [[46,-38,1.1],[47,-19,1],[44,-11,1.1],[28,-39,1.2],[35,-39,.9]])tree(x,z,k);
+  for(let x=15;x<50;x+=1.5){box(x,.9,-41.5,.12,1.8,.12,'#c6b88b',2);box(x,1.1,-41.5,1.4,.35,.1,'#e2d3a8',2);}
+  for(let z=-41;z<14;z+=1.5){box(49.6,.9,z,.12,1.8,.12,'#c6b88b',2);box(49.6,1.1,z,.1,.35,1.4,'#e2d3a8',2);}
+  // All five openings are defined once and align with collision-free corridors.
+  for(const p of PORTALS){const across=p.axis==='x';box(p.x,-.19,p.z,across?4:p.width,.34,across?p.width:4,'#b1c8cf',-1,false);flat(p.x,.045,p.z,across?4.2:p.width,across?p.width:4.2,'#f1dfb1',.1);
+    for(const side of [-1,1])box(p.x+(across?0:side*(p.width/2+.3)),2.45,p.z+(across?side*(p.width/2+.3):0),.45,4.9,.45,'#e9c779',2);
+    box(p.x,4.96,p.z,across?.5:p.width+.95,.22,across?p.width+.95:.5,'#ffe1a0',2);
+  }
+
   baseLayer=2;
-  let zone='workshop',selected=null,time=0,last=0,lastDraw=0,w=1,h=1,pixel=2,scale=1;
-  const camera={x:-5,z:-1,angle:Math.PI/4,zoom:1,panX:0,panY:0};
+  let zone='workshop',overview=false,selected=null,time=0,last=0,lastDraw=0,w=1,h=1,pixel=2,scale=1;
+  const camera={x:-5,z:-1,angle:Math.PI/4,zoom:1,panX:0,panY:0,viewW:46,viewH:34};
   const goal={...camera};
   const bot={x:-8.2,z:7.9,route:[],angle:0};
   const hallPath=[[-18.2,7.5],[-8,9],[7.8,8.4],[9,-4.8],[3.8,-5.5],[-7.8,-5.5],[-8,2.5],[-8,7.5]];
   const officeProjects=new Set(['illuna','cloud','horizon27','brand']);
-  const officePath=[[-38,6.2],[-38,3.6],[-38,-4.8],[-26,-4.8],[-26,6.2],[-33,9]];
-  const paths={workshop:hallPath,office:officePath,library:[[-81,8],[-79,3],[-79,-9],[-59,-10],[-57,2],[-64,9]]};
-  const gardenPath=[[20.5,11],[33,11],[42,10],[42,-.7],[34,-.7],[33,-4],[24,-4],[23,-.3],[21,2.5],[20.5,5.8]];
+  const officePath=[[-38,6.2],[-38,3.6],[-38,-4.8],[-26,-4.8],[-26,6.2],[-33,9]].map(officePoint);
+  const paths={workshop:hallPath,office:officePath,library:[[-35,9],[-35,-5],[-28,-13],[-28,-25],[-34,-29],[-51,-28],[-51,-8],[-48,10]]};
+  const gardenPath=[[24,11],[34,11],[45,10],[46,-15],[44,-20.8],[24,-20.8],[24,-34],[24,-20.8],[21,-18],[21,2.5],[21,10.5]];
   paths.garden=gardenPath;
   const dogs=[{name:'Josie',kind:'maltipoo',x:-10,z:8.5,leg:0,way:2,speed:2.05,angle:0,route:[],wait:0},{name:'Kara',kind:'pointer',x:1.5,z:8.5,leg:0,way:3,speed:2.7,angle:0,route:[],wait:0}];
   const anchors={werkstatt:[5.2,3.5,5.3],brand:[-32,3.8,0],automations:[-9,3.8,-6.2],josie:[39,3.75,-4],kara:[39,3.75,3],illuna:[-43,3.8,-8],cloud:[-32,3.8,-8],horizon27:[-43,3.8,0],garden:[11.65,5.25,2.65],bmw:[-13.5,.35,6.4],aston:[-3.8,.35,6.4]};
+  for(const id of officeProjects){const a=anchors[id];[a[0],a[2]]=officePoint([a[0],a[2]]);}
   const elements={werkstatt:document.querySelector('[data-anchor="werkstatt"]'),brand:document.querySelector('[data-anchor="brand"]'),automations:document.querySelector('[data-anchor="automations"]'),josie:document.querySelector('[data-anchor="josie"]'),kara:document.querySelector('[data-anchor="kara"]'),horizon27:document.querySelector('[data-anchor="horizon27"]'),illuna:document.querySelector('[data-anchor="illuna"]'),cloud:document.querySelector('[data-anchor="cloud"]'),garden:document.querySelector('[data-anchor="garden"]')};
-  const returnButton=document.createElement('button');returnButton.type='button';returnButton.className='hotspot';returnButton.textContent='← Zur Werkhalle';returnButton.setAttribute('aria-label','Zurück in die Werkhalle');returnButton.hidden=true;document.querySelector('main').append(returnButton);returnButton.addEventListener('click',()=>{$(zone==='library'?'zone-office':'zone-workshop').click();});
-  const officeButton=document.createElement('button');officeButton.type='button';officeButton.className='hotspot';officeButton.textContent='Zum Büro ↗';officeButton.addEventListener('click',()=>{$('zone-office').click();});document.querySelector('main').append(officeButton);
-  const libraryButton=document.createElement('button');libraryButton.type='button';libraryButton.className='hotspot';libraryButton.textContent='Zur Bibliothek ↗';libraryButton.addEventListener('click',()=>{$('zone-library').click();});document.querySelector('main').append(libraryButton);
+  const portalButtons=PORTALS.map(portal=>{const button=document.createElement('button');button.type='button';button.className='hotspot portal-label';button.dataset.portal=portal.id;button.addEventListener('click',()=>{const target=portal.a===zone?portal.b:portal.a;$('zone-'+target).click();});document.querySelector('main').append(button);return {portal,button};});
+  const roomButtons=Object.entries(ROOMS).map(([id,info])=>{const button=document.createElement('button');button.type='button';button.className='hotspot room-label';button.textContent=info.title;button.dataset.roomView=id;button.addEventListener('click',()=>{$('zone-'+id).click();});document.querySelector('main').append(button);return {id,info,button};});
   const graphButtons=new Map();let graphPoints=[],graphAngle=0;
   const agentButtons=new Map();
   for(const a of agents.list()){
@@ -276,7 +278,7 @@ export function createBrickWorld({canvas,room,state,selectProject,toast,onZone,a
     const name=document.createElement('span');name.textContent=a.name;b.append(name);b.addEventListener('click',()=>agents.open(a.id));document.querySelector('main').append(b);agentButtons.set(a.id,b);
   }
   function agentPosition(a){return AGENT_DOCKS[projectRoom(a.projectId)][a.index];}
-  function project(p){const dx=p[0]-camera.x,dz=p[2]-camera.z,co=Math.cos(camera.angle),si=Math.sin(camera.angle);return [w*.555+(dx*co-dz*si)*scale+camera.panX,h*.63+(dx*si+dz*co)*scale*.52-p[1]*scale+camera.panY];}
+  function project(p){const dx=p[0]-camera.x,dz=p[2]-camera.z,co=Math.cos(camera.angle),si=Math.sin(camera.angle);return [w*.555+(dx*co-dz*si)*scale+camera.panX,h*.56+(dx*si+dz*co)*scale*.52-p[1]*scale+camera.panY];}
   function polygon(points,color,alpha=1,edge=false,plastic=false){
     ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();
     ctx.globalAlpha=alpha;
@@ -357,16 +359,16 @@ export function createBrickWorld({canvas,room,state,selectProject,toast,onZone,a
     const data=wiki.graph(),nodes=data.entries,n=nodes.length,selectedNode=data.selected;
     const lookup=new Map();
     graphPoints=nodes.map((e,i)=>{
-      let p;if(i===0)p=[-70,6,-3];else{const v=(i-.5)/Math.max(1,n-1),phi=i*2.399963,yy=1-2*v,r=Math.sqrt(Math.max(0,1-yy*yy)),angle=phi+graphAngle;p=[-70+Math.cos(angle)*r*8.4,6+yy*4.3,-3+Math.sin(angle)*r*7.4];}
+      let p;if(i===0)p=[-43,6,-15];else{const v=(i-.5)/Math.max(1,n-1),phi=i*2.399963,yy=1-2*v,r=Math.sqrt(Math.max(0,1-yy*yy)),angle=phi+graphAngle;p=[-43+Math.cos(angle)*r*8.4,6+yy*4.3,-15+Math.sin(angle)*r*7.4];}
       const node={...e,p,color:wiki.colors[e.kind]};lookup.set(e.id,node);
       let b=graphButtons.get(e.id);if(!b){b=document.createElement('button');b.type='button';b.className='knowledge-node';b.dataset.knowledge=e.id;const label=document.createElement('span');b.append(label);b.addEventListener('click',()=>wiki.select(e.id));document.querySelector('main').append(b);graphButtons.set(e.id,b);}
       b.querySelector('span').textContent=e.title;b.setAttribute('aria-label','Wiki-Eintrag öffnen: '+e.title);b.setAttribute('aria-pressed',String(e.id===selectedNode));b.classList.toggle('with-label',i<12||e.id===selectedNode);b.style.setProperty('--node-color',node.color);
       return node;
     });
     for(const [id,b] of graphButtons)if(!lookup.has(id)){b.remove();graphButtons.delete(id);}
-    const center=project([-70,5.4,-3]),halo=ctx.createRadialGradient(...center,0,...center,scale*10);halo.addColorStop(0,'#75e7dd18');halo.addColorStop(1,'#75e7dd00');ctx.fillStyle=halo;ctx.beginPath();ctx.arc(...center,scale*10,0,Math.PI*2);ctx.fill();
+    const center=project([-43,5.4,-15]),halo=ctx.createRadialGradient(...center,0,...center,scale*10);halo.addColorStop(0,'#75e7dd18');halo.addColorStop(1,'#75e7dd00');ctx.fillStyle=halo;ctx.beginPath();ctx.arc(...center,scale*10,0,Math.PI*2);ctx.fill();
     // Three inclined rings echo the companion's atom, with a much larger scale.
-    for(let ring=0;ring<3;ring++){ctx.beginPath();for(let j=0;j<=100;j++){const a=j/100*Math.PI*2,turn=ring*Math.PI/3+graphAngle*.25;const q=project([-70+Math.cos(a)*9.2*Math.cos(turn),5.6+Math.sin(a)*4.6,-3+Math.cos(a)*9.2*Math.sin(turn)]);j?ctx.lineTo(...q):ctx.moveTo(...q);}ctx.strokeStyle=['#8ef4e165','#bbaaff55','#ffe0a055'][ring];ctx.lineWidth=Math.max(1,scale*.025);ctx.stroke();}
+    for(let ring=0;ring<3;ring++){ctx.beginPath();for(let j=0;j<=100;j++){const a=j/100*Math.PI*2,turn=ring*Math.PI/3+graphAngle*.25;const q=project([-43+Math.cos(a)*9.2*Math.cos(turn),5.6+Math.sin(a)*4.6,-15+Math.cos(a)*9.2*Math.sin(turn)]);j?ctx.lineTo(...q):ctx.moveTo(...q);}ctx.strokeStyle=['#8ef4e165','#bbaaff55','#ffe0a055'][ring];ctx.lineWidth=Math.max(1,scale*.025);ctx.stroke();}
     for(const [from,to] of data.edges){const a=lookup.get(from),b=lookup.get(to);if(!a||!b)continue;const active=from===selectedNode||to===selectedNode;ctx.strokeStyle=active?'#f5e3a4bb':'#8bbdc296';ctx.lineWidth=Math.max(1,scale*(active?.06:.03));ctx.beginPath();ctx.moveTo(...project(a.p));ctx.lineTo(...project(b.p));ctx.stroke();}
     const depth=p=>p.p[0]*Math.sin(camera.angle)+p.p[2]*Math.cos(camera.angle);
     for(const node of [...graphPoints].sort((a,b)=>depth(a)-depth(b))){const q=project(node.p),r=scale*(node.id===selectedNode?.53:node===graphPoints[0]?.56:.34);const glow=ctx.createRadialGradient(...q,r*.4,...q,r*4);glow.addColorStop(0,node.color+'99');glow.addColorStop(1,node.color+'00');ctx.fillStyle=glow;ctx.beginPath();ctx.arc(...q,r*4,0,Math.PI*2);ctx.fill();const fill=ctx.createRadialGradient(q[0]-r*.3,q[1]-r*.35,r*.05,...q,r);fill.addColorStop(0,'#ffffff');fill.addColorStop(.3,node.color);fill.addColorStop(1,shade(node.color,.55));ctx.fillStyle=fill;ctx.beginPath();ctx.arc(...q,r,0,Math.PI*2);ctx.fill();if(node.id===selectedNode){ctx.strokeStyle='#fff0bc';ctx.lineWidth=2;ctx.beginPath();ctx.arc(...q,r*1.5,0,Math.PI*2);ctx.stroke();}}
@@ -411,61 +413,48 @@ export function createBrickWorld({canvas,room,state,selectProject,toast,onZone,a
   function ripple(){const wave=state().paused?0:Math.sin(time*1.6)*.16;for(let i=0;i<8;i++){const x=25.25+(i%3)*1.38,z=-.68+Math.floor(i/3)*1.32;flat(x+wave,1.165,z,.62,.045,'#b4e1d2',2,.8);flat(x-.17+wave,1.166,z+.11,.24,.035,'#94ccc7',2,.7);}}
   let dirty=true;
   function tickActor(actor,dt,speed,target){if(!target)return;const dx=target[0]-actor.x,dz=target[1]-actor.z,dist=Math.hypot(dx,dz);if(dist<speed*dt){actor.x=target[0];actor.z=target[1];return true;}actor.x+=dx/dist*speed*dt;actor.z+=dz/dist*speed*dt;actor.angle=Math.atan2(dx,dz);return false;}
+  function setOverview(value){overview=value;document.querySelector('.app').classList.toggle('overview',value);$('overview').setAttribute('aria-pressed',String(value));for(const id of Object.keys(ROOMS))$('zone-'+id).setAttribute('aria-pressed',String(!value&&id===zone));}
   function go(next,manual=false){
-    if(!paths[next])return;const previousZone=zone,changed=next!==zone;zone=next;
-    const view={workshop:[-5,-1],garden:[28,2.5],office:[-36.5,-1],library:[-71,-4]}[zone];
-    [goal.x,goal.z]=view;goal.zoom=manual?goal.zoom:1;goal.panX=goal.panY=0;goal.angle=manual?goal.angle:Math.PI/4;onZone(zone);
-    returnButton.hidden=zone==='workshop';officeButton.hidden=zone!=='workshop';
+    if(!ROOMS[next])return;const changed=next!==zone;zone=next;setOverview(false);
+    [goal.x,goal.z]=ROOMS[zone].view;[goal.viewW,goal.viewH]=ROOMS[zone].span;
+    goal.zoom=manual?goal.zoom:1;goal.panX=goal.panY=0;goal.angle=manual?goal.angle:Math.PI/4;onZone(zone);
     if(changed){
-      const libraryTransition=zone==='library'||previousZone==='library';
-      const officeTransition=zone==='office'||previousZone==='office';
-      if(libraryTransition){
-        const destination=zone==='library'?[-77,8]:zone==='office'?[-38,6.2]:zone==='garden'?[20.7,4.8]:[-8.2,7.9];
-        const entry=zone==='library'?[-54,6.2]:zone==='office'?[-47,6.2]:destination;
-        if(!manual){[bot.x,bot.z]=entry;bot.route=zone==='library'?[[entry[0],9.5],[-77,9.5],destination]:[destination];}
-        dogs.forEach((d,i)=>{[d.x,d.z]=[destination[0]+i,destination[1]];d.route=[];d.way=0;});
-      }else if(officeTransition){
-        // Navigation enters through the room's doorway; arrow-key walking stays continuous.
-        const entry=zone==='office'?[-26,6.2]:zone==='garden'?[13,3.05]:[-20.3,6.2];
-        const destination=zone==='office'?[-38,6.2]:zone==='garden'?[20.7,4.8]:[-8.2,7.9];
-        if(!manual){[bot.x,bot.z]=entry;bot.route=[destination];}
-        dogs.forEach((d,i)=>{[d.x,d.z]=[entry[0],entry[1]+i*.7];d.route=[destination];d.way=0;d.wait=i*.25;});
-      }else{
-        const route=zone==='garden'?[[-8,9],[9.3,8.4],[10.5,3.05],[20.7,3.05],[20.7,4.8]]:[[20.7,3.05],[10.5,3.05],[9.3,8.4],[-8,9],[-8.2,7.9]];
-        if(!manual)bot.route=route.map(p=>[...p]);dogs.forEach((d,i)=>{d.route=route.map(p=>[...p]);d.way=zone==='garden'?1:2;d.wait=i*.25;});
-      }
+      const destination=ROOMS[zone].home;
+      if(!manual)bot.route=findPath(bot,destination);
+      dogs.forEach((d,i)=>{d.route=findPath(d,paths[zone][i]);d.way=i;d.wait=i*.25;});
     }
-    if(state().paused||reduced.matches){Object.assign(camera,goal);const final=bot.route.at(-1);if(final){[bot.x,bot.z]=final;bot.route=[];}dogs.forEach((d,i)=>{[d.x,d.z]=paths[zone][i];d.route=[];});}
+    if(state().paused||reduced.matches){Object.assign(camera,goal);if(!manual&&changed){[bot.x,bot.z]=ROOMS[zone].home;bot.route=[];}dogs.forEach((d,i)=>{[d.x,d.z]=paths[zone][i];d.route=[];});}
     dirty=true;render();
   }
-  room.go=go;room.rotate=delta=>{goal.angle=clamp(goal.angle+delta,.39,1.10);if(state().paused)camera.angle=goal.angle;dirty=true;render();};room.reset=()=>go(zone);room.zoom=factor=>{goal.zoom=clamp(goal.zoom*factor,.7,1.9);if(state().paused)camera.zoom=goal.zoom;dirty=true;render();};
+  room.go=go;
+  room.overview=()=>{if(overview){go(zone);return;}setOverview(true);Object.assign(goal,{x:-5,z:-14,angle:.5,zoom:1,panX:0,panY:0,viewW:139,viewH:86});if(state().paused)Object.assign(camera,goal);dirty=true;render();};
+  room.rotate=delta=>{goal.angle=clamp(goal.angle+delta,.2,1.1);if(state().paused)camera.angle=goal.angle;dirty=true;render();};
+  room.reset=()=>{if(overview){setOverview(false);room.overview();}else go(zone);};
+  room.zoom=factor=>{goal.zoom=clamp(goal.zoom*factor,.65,2);if(state().paused)camera.zoom=goal.zoom;dirty=true;render();};
   room.select=id=>{selected=id;if(id==='garden')go('garden');else if(id)go(officeProjects.has(id)?'office':'workshop');dirty=true;render();};
   room.refreshWiki=()=>{dirty=true;render();};
   room.refreshAgents=()=>{dirty=true;render();};
   room.pause=()=>{Object.assign(camera,goal);dirty=true;render();};
-  room.callDogs=()=>{dogs.forEach((d,i)=>{d.route=[[bot.x+(i?1.25:-1),bot.z+.8]];d.wait=0;d.coming=true;});toast('Die beiden kommen angerannt. Leckerli nicht vergessen!');dirty=true;};
+  room.callDogs=()=>{dogs.forEach((d,i)=>{d.route=findPath(d,[bot.x+(i?1.25:-1),bot.z+.8]);d.wait=0;d.coming=true;});toast('Die beiden kommen angerannt. Leckerli nicht vergessen!');dirty=true;};
   function updateAnchors(){const sceneRect=canvas.getBoundingClientRect(),appRect=document.querySelector('.app').getBoundingClientRect();const px=sceneRect.width/w,py=sceneRect.height/h;function position(el,p){const q=project(p),x=q[0]*px+sceneRect.left-appRect.left,y=q[1]*py+sceneRect.top-appRect.top;el.style.left=x+'px';el.style.top=y+'px';el.classList.toggle('ready',x>8&&x<appRect.width-8&&y>100&&y<appRect.height-45);}
-    for(const [id,el] of Object.entries(elements)){el.hidden=zone==='library'?true:officeProjects.has(id)?zone!=='office':['josie','kara'].includes(id)?zone!=='garden':id==='garden'?zone==='office':zone!=='workshop';const a=id==='garden'&&zone==='garden'?[17,3.05,1.05]:anchors[id];position(el,a);if(id==='garden')el.innerHTML=zone==='garden'?'Garten & Pool':'Zum Garten ↗';}
-    returnButton.textContent=zone==='library'?'Zum Büro ↗':'← Zur Werkhalle';returnButton.setAttribute('aria-label',zone==='library'?'Zum Büro':'Zurück in die Werkhalle');
-    position(returnButton,zone==='library'?[-52,5.3,6.2]:zone==='office'?[-24.8,4.9,6.2]:[13.3,2.7,1.4]);
-    libraryButton.hidden=zone!=='office';position(libraryButton,[-48.8,5.3,6.2]);
+    for(const [id,el] of Object.entries(elements)){el.hidden=overview||zone==='library'?true:officeProjects.has(id)?zone!=='office':['josie','kara','garden'].includes(id)?zone!=='garden':zone!=='workshop';const a=id==='garden'?[17,3.05,1.05]:anchors[id];position(el,a);if(id==='garden')el.textContent='Garten & Pool';}
+    for(const {portal:p,button:b} of portalButtons){b.hidden=overview||(p.a!==zone&&p.b!==zone);const target=p.a===zone?p.b:p.a;b.textContent=(target==='library'?'Zur ':target==='workshop'?'Zur ':'Zum ')+ROOMS[target].title+' ↗';b.setAttribute('aria-label','Durchgang '+ROOMS[zone].title+' – '+ROOMS[target].title);position(b,[p.x,5.6,p.z]);}
+    for(const {id,info,button} of roomButtons){button.hidden=!overview;position(button,[info.view[0],3.2,info.view[1]]);}
     const graphVisible=wiki.graph().visible;
-    for(const [id,b] of graphButtons){const point=graphPoints.find(n=>n.id===id);b.hidden=zone!=='library'||!graphVisible||!point;if(point)position(b,point.p);}
-officeButton.hidden=zone!=='workshop';position(officeButton,[-21.8,5.1,6.2]);position($('avatar-note'),[bot.x,4.55,bot.z]);
-    for(const a of agents.list()){const b=agentButtons.get(a.id),[x,z]=agentPosition(a);b.hidden=zone!==projectRoom(a.projectId);b.setAttribute('aria-label',`${a.name} · ${STATUS_LABELS[a.status]} · Konsole öffnen`);b.dataset.status=a.status;position(b,[x,1.2,z]);}
+    for(const [id,b] of graphButtons){const point=graphPoints.find(n=>n.id===id);b.hidden=overview||zone!=='library'||!graphVisible||!point;if(point)position(b,point.p);}
+    position($('avatar-note'),[bot.x,4.55,bot.z]);
+    for(const a of agents.list()){const b=agentButtons.get(a.id),[x,z]=agentPosition(a);b.hidden=overview||zone!==projectRoom(a.projectId);b.setAttribute('aria-label',`${a.name} · ${STATUS_LABELS[a.status]} · Konsole öffnen`);b.dataset.status=a.status;position(b,[x,1.2,z]);}
     const labelRects=[];
     for(const b of graphButtons.values()){if(b.hidden)continue;const label=b.querySelector('span');if(!b.classList.contains('with-label'))continue;const bx=parseFloat(b.style.left),by=parseFloat(b.style.top),lw=Math.min(160,label.offsetWidth||100),lh=26;let offset=30;for(const candidate of [30,-32,55,-57,80,-82]){const rect={x:bx-lw/2,y:by+candidate,w:lw,h:lh};if(!labelRects.some(r=>rect.x<r.x+r.w+5&&rect.x+rect.w+5>r.x&&rect.y<r.y+r.h+3&&rect.y+rect.h+3>r.y)){offset=candidate;break;}}label.style.top=(offset+17)+'px';labelRects.push({x:bx-lw/2,y:by+offset,w:lw,h:lh});}
     $('avatar-note').style.maxWidth=innerWidth<760?'220px':'';
   }
   let projectionVersion=0,lastCameraKey='',staticOrder=[];
   function render(){
-    const outdoor=lerp(0,1,clamp((camera.x+5)/30,0,1));
-    const officeBlend=clamp((-camera.x-5)/31.5,0,1);
-    scale=zone==='library'?Math.min(w/48,h/38)*camera.zoom:Math.min(w/lerp(lerp(46,41,outdoor),38,officeBlend),h/lerp(lerp(34,30,outdoor),30,officeBlend))*camera.zoom;
-    const bg=ctx.createRadialGradient(w*.54,h*.48,10,w*.54,h*.5,Math.max(w,h)*.8);bg.addColorStop(0,zone==='garden'?'#284849':'#2b425b');bg.addColorStop(1,'#101d30');ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
+    scale=Math.min(w/camera.viewW,h/camera.viewH)*camera.zoom;
+    const bg=ctx.createRadialGradient(w*.54,h*.48,10,w*.54,h*.5,Math.max(w,h)*.8);bg.addColorStop(0,zone==='garden'&&!overview?'#f0f8de':'#f8fbfc');bg.addColorStop(1,'#cfe4ed');ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
     ctx.imageSmoothingEnabled=true;
     const dynamic=[];active=dynamic;baseLayer=2;drawBot();dogs.forEach(drawDog);agents.list().forEach(drawAgent);ripple();
-    if(zone==='library'&&wiki.graph().visible)dynamic.push({kind:'graph',p:[[-70,5,-3]],mid:[-70,5,-3],layer:2});
+    if((zone==='library'||overview)&&wiki.graph().visible)dynamic.push({kind:'graph',p:[[-43,5,-15]],mid:[-43,5,-15],layer:2});
     if(selected&&selected!=='garden'){const a=anchors[selected];flat(a[0],.052,a[2]+.4,selected==='illuna'?7.5:6,3.2,'#ffd458',.2,.25);}
     active=fixed;
     const si=Math.sin(camera.angle),co=Math.cos(camera.angle);
@@ -497,15 +486,11 @@ officeButton.hidden=zone!=='workshop';position(officeButton,[-21.8,5.1,6.2]);pos
     const horizontal=Number(keys.has('ArrowRight'))-Number(keys.has('ArrowLeft'));
     const vertical=Number(keys.has('ArrowDown'))-Number(keys.has('ArrowUp'));
     if(!horizontal&&!vertical)return;
+    if(overview)go(zone,true);
     bot.route=[];
     const next=moveCompanion(bot,horizontal,vertical,camera.angle,dt*6);
     bot.x=next.x;bot.z=next.z;
-    if(bot.x<-52&&zone==='office')go('library',true);
-    else if(bot.x>-48.1&&zone==='library')go('office',true);
-    else if(bot.x<-24.6&&zone==='workshop')go('office',true);
-    else if(bot.x>-21.1&&zone==='office')go('workshop',true);
-    else if(bot.x>12.6&&zone==='workshop')go('garden',true);
-    else if(bot.x<10.6&&zone==='garden')go('workshop',true);
+    const currentZone=zoneAt(bot.x,bot.z);if(currentZone&&currentZone!==zone)go(currentZone,true);
     dirty=true;
   }
   document.addEventListener('keydown',e=>{
@@ -523,8 +508,8 @@ officeButton.hidden=zone!=='workshop';position(officeButton,[-21.8,5.1,6.2]);pos
   document.addEventListener('focusin',e=>{if(editable(e.target))keys.clear();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden)keys.clear();});
   function animate(now){requestAnimationFrame(animate);const dt=Math.min((now-last)/1000||0,.05);last=now;if(document.hidden)return;if(keys.size)moveBot(dt);const moving=Math.abs(camera.x-goal.x)+Math.abs(camera.z-goal.z)+Math.abs(camera.angle-goal.angle)+Math.abs(camera.zoom-goal.zoom)>.001;
-    if(!state().paused){time+=dt;if(zone==='library'&&wiki.graph().visible&&wiki.graph().rotating)graphAngle+=dt*.12;const t=1-Math.exp(-dt*4.8);for(const k of ['x','z','angle','zoom','panX','panY'])camera[k]=lerp(camera[k],goal[k],t);if(bot.route.length&&tickActor(bot,dt,6.5,bot.route[0]))bot.route.shift();dogs.forEach(d=>{if(d.wait>0){d.wait-=dt;return;}const path=paths[zone];const target=d.route.length?d.route[0]:path[d.way%path.length];if(tickActor(d,dt,d.route.length?5:d.speed,target)){if(d.route.length){d.route.shift();if(!d.route.length&&d.coming){d.wait=2.3;d.coming=false;}}else d.way=(d.way+1)%path.length;}});}
+    if(!state().paused){time+=dt;if((zone==='library'||overview)&&wiki.graph().visible&&wiki.graph().rotating)graphAngle+=dt*.12;const t=1-Math.exp(-dt*4.8);for(const k of ['x','z','angle','zoom','panX','panY','viewW','viewH'])camera[k]=lerp(camera[k],goal[k],t);if(bot.route.length&&tickActor(bot,dt,6.5,bot.route[0]))bot.route.shift();dogs.forEach(d=>{if(d.wait>0){d.wait-=dt;return;}const path=paths[zone];const target=d.route.length?d.route[0]:path[d.way%path.length];if(tickActor(d,dt,d.route.length?5:d.speed,target)){if(d.route.length){d.route.shift();if(!d.route.length&&d.coming){d.wait=2.3;d.coming=false;}}else d.way=(d.way+1)%path.length;}});}
     if(now-lastDraw<1000/28)return;lastDraw=now;if(!state().paused||moving||keys.size||dirty)render();
   }
-  new ResizeObserver(resize).observe(canvas);resize();requestAnimationFrame(animate);
+  new ResizeObserver(resize).observe(canvas);resize();room.overview();requestAnimationFrame(animate);
 }

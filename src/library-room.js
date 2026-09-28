@@ -1,32 +1,30 @@
-// A large physical wing, with an open front so the knowledge constellation stays visible.
+import {ROOMS} from './layout.js';
+// Full-height west wing: both middle rooms have their own entrance.
 export function buildLibrary({box,flat,stud,plant,disk,group}){
- box(-72,-.4,-4,40,.7,33,'#374b63',-2,false);
- for(let x=-91.4;x<-52.4;x+=1.4)for(let z=-19.7;z<12;z+=1.4){flat(x,.015,z,1.37,1.37,(Math.round((x+z)/1.4)%2)?'#95795b':'#a08766',0);stud(x,.025,z,.14,'#b39872',0);}
- box(-50.5,-.24,6.2,4.8,.45,4,'#465d70',-1,false);flat(-50.5,.025,6.2,4.9,3.9,'#d7bf89',0);
- // Back wall and the shorter left wall carry three levels of books.
- box(-72,5,-20,40,10,.55,'#29435b',1,false);box(-91.7,5,-6.5,.55,10,27,'#29435b',1,false);
- box(-72,10.12,-19.9,40,.3,.85,'#dab673',1);box(-91.6,10.12,-6.6,.85,.3,27.5,'#dab673',1);
- const colors=['#80b6b9','#d6aa66','#956f9d','#cf806a','#6f91b1','#b9c78e','#dfc99c'];
+ const [x1,x2,z1,z2]=ROOMS.library.bounds;
+ box(-42,-.4,-14,x2-x1,.7,z2-z1,'#b4bdc5',-2,false);
+ for(let x=x1+.7;x<x2;x+=1.4)for(let z=z1+.7;z<z2;z+=1.4){flat(x,.015,z,1.37,1.37,(Math.round((x+z)/1.4)%2)?'#e0c69c':'#e9d3ae',0);stud(x,.025,z,.14,'#f0dcb9',0);}
+ box(-42,5,-41.7,36,10,.55,'#dce9ec',1,false);box(-59.7,5,-17,.55,10,49,'#dce9ec',1,false);
+ box(-42,10.12,-41.7,36,.3,.85,'#e8c987',1);box(-59.6,10.12,-17,.85,.3,49,'#e8c987',1);
+ const colors=['#66b8c6','#e1b75c','#a997cc','#dc917a','#84add1','#a4c988','#f3d18b'];
  function shelf(x,z,angle,seed){group(x,0,z,angle,()=>{
-  box(0,4.6,-.4,4.8,9.2,.35,'#574a3d',1,false);
-  for(const dx of [-2.4,2.4])box(dx,4.65,0,.22,9.3,1.05,'#a28153',2);
-  for(let row=0;row<4;row++){const y=.4+row*2.15;box(0,y,0,4.8,.2,1.25,'#bc9b65',2);
-   for(let j=0;j<9;j++){const h=1.2+((j*3+row+seed)%5)*.14,xx=-2.05+j*.51,c=colors[(j+row*3+seed)%colors.length];box(xx,y+.14+h/2,.02,.39,h,.8,c,2,false);box(xx,y+.43,.44,.24,.045,.02,'#e7d8a3',2,false);}
-  }
-  box(0,9.23,0,5,.23,1.4,'#d3b47a',2);
+  box(0,4.6,-.4,4.8,9.2,.35,'#b19572',1,false);
+  for(const dx of [-2.4,2.4])box(dx,4.65,0,.22,9.3,1.05,'#d6ba8a',2);
+  for(let row=0;row<4;row++){const y=.4+row*2.15;box(0,y,0,4.8,.2,1.25,'#e3c994',2);
+   for(let j=0;j<9;j++){const h=1.2+((j*3+row+seed)%5)*.14,xx=-2.05+j*.51,c=colors[(j+row*3+seed)%colors.length];box(xx,y+.14+h/2,.02,.39,h,.8,c,2,false);box(xx,y+.43,.44,.24,.045,.02,'#fff0c9',2,false);}
+  }box(0,9.23,0,5,.23,1.4,'#f0d69f',2);
  });}
- for(let i=0;i<7;i++)shelf(-87.8+i*5.2,-18.8,0,i);
- for(let i=0;i<4;i++)shelf(-90.6,-13.5+i*5.3,Math.PI/2,i+7);
- // Brass reading lights and a sliding library ladder.
- for(const x of [-86,-75.6,-65.2,-55]){box(x,9.65,-17.8,.07,.9,.07,'#e5c77d',2,false);box(x,9.13,-17.8,1.8,.17,.65,'#eedbb1',2);}
- for(const x of [-82.1,-80.9])box(x,3.9,-17.25,.13,7.8,.13,'#d5b879',2,false);
- for(let j=0;j<10;j++)box(-81.5,.4+j*.77,-17.21,1.3,.12,.28,'#e4cb91',2,false);
- // Low circular projector: the knowledge graph is suspended above it.
- disk(-70,.08,-3,8.8,8.8,'#314e60',.1,.75,48);disk(-70,.09,-3,8.1,8.1,'#597285',.1,.6,48);
- disk(-70,.11,-3,7.8,7.8,'#213d53',.1,1,48);disk(-70,.14,-3,3,3,'#91ddd9',.2,.2,40);
- box(-70,.48,-3,3.4,.76,3.4,'#3b6078',2);box(-70,.9,-3,3.65,.12,3.65,'#d7bb77',2);disk(-70,.98,-3,1.48,1.48,'#7de6db',2,.8,32);
- // Reading places at the front and far side, leaving a broad circular aisle.
- for(const x of [-84.5,-57.8]){box(x,1.2,5.3,3.5,.24,2.3,'#cfaf76',2);for(const dx of [-1.35,1.35])box(x+dx,.58,5.3,.17,1.15,1.7,'#546b77',2);box(x,1.42,5.3,1.1,.16,.82,'#8ea7b5',2);box(x,1.53,5.3,.95,.06,.76,'#f1dfad',2);box(x,.55,7.4,2.1,.9,1.5,'#637f8d',2);box(x,1.2,8.02,2.1,.9,.26,'#83aaa9',2);}
- plant(-55.4,-16,1.5);plant(-87,9.6,1.2);plant(-55.5,9.5,1.2);
- for(const x of [-52.1,-48.8]){for(const z of [3.8,8.6])box(x,2.4,z,.48,4.8,.5,'#c4a36d',2);box(x,4.91,6.2,.58,.26,5.35,'#e2c387',2);}
+ for(let i=0;i<6;i++)shelf(-55.7+i*5.25,-40.5,0,i);
+ for(let i=0;i<9;i++)shelf(-58.9,-35.3+i*5.25,Math.PI/2,i+6);
+ for(const x of [-54,-44,-33]){box(x,9.65,-39.5,.07,.9,.07,'#e5c77d',2,false);box(x,9.13,-39.5,1.8,.17,.65,'#fff6d7',2);}
+ for(const x of [-49.1,-47.9])box(x,3.9,-39.0,.13,7.8,.13,'#d5b879',2,false);
+ for(let j=0;j<10;j++)box(-48.5,.4+j*.77,-38.96,1.3,.12,.28,'#f2dca6',2,false);
+ disk(-43,.08,-15,10,10,'#a6cbd6',.1,.8,48);disk(-43,.09,-15,9.6,9.6,'#e6f4f2',.1,1,48);
+ disk(-43,.11,-15,9.1,9.1,'#c4e4e8',.1,1,48);disk(-43,.14,-15,3,3,'#67d8d0',.2,.2,40);
+ box(-43,.48,-15,3.4,.76,3.4,'#7cacbd',2);box(-43,.9,-15,3.65,.12,3.65,'#f0d69b',2);disk(-43,.98,-15,1.48,1.48,'#62dcd3',2,.8,32);
+ for(const x of [-53,-31]){box(x,1.2,3.1,3.5,.24,2.3,'#ead09e',2);for(const dx of [-1.35,1.35])box(x+dx,.58,3.1,.17,1.15,1.7,'#aec2cd',2);box(x,1.42,3.1,1.1,.16,.82,'#78b4ce',2);box(x,1.53,3.1,.95,.06,.76,'#fff2ce',2);box(x,.55,5.2,2.1,.9,1.5,'#73a9b8',2);box(x,1.2,5.82,2.1,.9,.26,'#97cdd0',2);}
+ // Shared reading table below the rear bookshelves.
+ box(-43,1.45,-32,8,.22,3,'#e5c995',2);for(const x of [-46,-40])box(x,.7,-32,.2,1.4,2.1,'#abc4ce',2);
+ for(const x of [-45.5,-43,-40.5]){box(x,1.64,-32,1.1,.15,.8,'#78b7c7',2);box(x,2.2,-32.8,.08,1.2,.08,'#d8b570',2,false);box(x,2.81,-32.8,.8,.18,.6,'#ffe3a8',2);}
+ plant(-27,-37,1.5);plant(-56,11,1.2);plant(-27,11,1.2);plant(-29,-9,1.3);
 }

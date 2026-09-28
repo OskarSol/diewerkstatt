@@ -159,12 +159,14 @@ createBrickWorld({
       workshop:['01 / DIE WERKHALLE','die werkstatt','Platz zum Bauen und Ausprobieren.','Garage · Werkbänke · Automations','Mit ↑ ↓ ← → fliege ich los.'],
       office:['02 / DAS BÜRO','das büro','Vier Projekte. Ein Raum für gute Ideen.','Illuna · Horizon27 · Cloud Lab · Personal Brand','Willkommen im Büro. Welchen Gedanken bauen wir heute weiter?'],
       library:['04 / DEIN WISSEN','die bibliothek','Ein Raum für alles, was du weißt.','Bücher · Verbindungen · neue Gedanken','Jede gute Verbindung beginnt mit einem Gedanken.'],
-      garden:['03 / DRAUSSEN IM GRÜNEN','Frische Ideen_','Pool, Pflanzen und ein bisschen Sonne.','Garten · Pool · Terrasse','Ab nach draußen. Die Hunde kommen mit!']
+      garden:['03 / DRAUSSEN IM GRÜNEN','der garten','Pool, Pflanzen und ein bisschen Sonne.','Garten · Pool · Terrasse','Ab nach draußen. Die Hunde kommen mit!']
     }[zone];
     ['zone-eyebrow','zone-title','zone-caption','zone-description','avatar-note'].forEach((id,i)=>$(id).textContent=labels[i]);
   }
 });
 document.querySelectorAll('[data-zone]').forEach(el => el.addEventListener('click', () => {agentUI.close(false);closeProject();room.go(el.dataset.zone);}));
+$('overview').addEventListener('click',()=>{agentUI.close(false);wiki.close();closeProject();room.overview();});
+document.querySelectorAll('[data-room-route]').forEach(el=>el.addEventListener('click',()=>{$('zone-'+el.dataset.roomRoute).click();}));
 $('zoom-in').addEventListener('click',()=>room.zoom(1.15));
 $('zoom-out').addEventListener('click',()=>room.zoom(1/1.15));
 

@@ -1,38 +1,46 @@
+import {ROOMS,PORTALS} from './layout.js';
 // Ground clearance for the hovering companion. Coordinates match the scene.
-const obstacles=[
- [-72.4,-67.6,-5.4,-.6],[-86.7,-82.3,3.6,8.6],[-60,-55.6,3.6,8.6],
-
+const officeObstacles=[
  [-46.3,-39.7,-9.6,-4.9],[-35.3,-28.7,-9.6,-4.9],
  [-46.3,-39.7,-1.6,3.1],[-35.3,-28.7,-1.6,3.1],
  [-28.8,-26.2,-10.6,-8],[-48.6,-46.4,-5.9,-.6],
- [-47,-41.4,4.2,9.1],[-27.4,-25,-12.5,-10.4],
-
+ [-47,-41.4,4.2,9.1],[-27.4,-25,-12.5,-10.4]
+].map(([x1,x2,z1,z2])=>[x1+31.5,x2+31.5,z1-27,z2-27]);
+const obstacles=[...officeObstacles,[-47.6,-38.4,-34,-30],
+ [-45.4,-40.6,-17.4,-12.6],[-55.2,-50.8,1.3,6.8],[-33.2,-28.8,1.3,6.8],
  [-11.2,-6.8,-7.5,-4.95],[2.5,7.9,4.05,6.6],
- [36.6,41.4,-6.4,-1.6],[36.6,41.4,.6,5.4], // new workbenches and kennels
- [-15.65,-11.35,-1.7,5.9],[-5.95,-1.65,-1.7,5.9], // cars
- [-21.4,-18.15,-7.4,3.5],[-20.2,-11.8,-11.6,-8.15], // shelves and labs
- [2.5,8.6,-4.95,-2.05], // relocated assembly table
- [-10.6,-7.6,-5.1,-2.55],[-.4,2.6,-5.1,-2.55],
- [2.5,4.7,4.15,6.45],[5.7,7.9,4.15,6.45],
- [14.8,19.5,-.2,2.25], // potting table, clear passage south of it
- [14.25,20.2,4.15,6.95],[14.25,20.2,6.85,9.55],
- [15.1,19.5,-6.3,-3.8],[16.8,20.4,-3.95,-1.55], // terrace furniture
- [28.5,32.3,4.6,9.1],[-19.1,-16.9,7.7,9.95]
+ [36.6,41.4,-6.4,-1.6],[36.6,41.4,.6,5.4],
+ [-15.65,-11.35,-1.7,5.9],[-5.95,-1.65,-1.7,5.9],
+ [-21.4,-18.15,-7.4,3.5],[-20.2,-11.8,-11.6,-8.15],
+ [2.5,8.6,-4.95,-2.05],[-10.6,-7.6,-5.1,-2.55],[-.4,2.6,-5.1,-2.55],
+ [14.8,19.5,-.2,2.25],[14.25,20.2,4.15,6.95],[14.25,20.2,6.85,9.55],
+ [15.1,19.5,-6.3,-3.8],[16.8,20.4,-3.95,-1.55],
+ [28.5,32.3,4.6,9.1],[-19.1,-16.9,7.7,9.95],[7.8,10.2,-9.8,-7.4],
+ [27.5,32.5,-31.5,-27.1],[37,46,-36.5,-33.5],[37,46,-29.5,-26.5],
+ [16.5,22.5,-38.5,-35.5],[16.5,22.5,-32.5,-29.5]
 ];
 export function canStand(x,z){
- const insideHall=x>=-21.1&&x<=11.8&&z>=-12.3&&z<=10.1;
- const insideGarden=x>=11.2&&x<=43.9&&z>=-8.2&&z<=13.15;
- const insideOffice=x>=-48.1&&x<=-24&&z>=-12.2&&z<=10.1;
- const insideLibrary=x>=-89.4&&x<=-52&&z>=-17.2&&z<=11.3;
- const insideLibraryPassage=x>=-52.8&&x<=-47.4&&z>=4.45&&z<=7.95;
- const insidePassage=x>=-24.8&&x<=-20.8&&z>=4.45&&z<=7.95;
- if(!insideHall&&!insideGarden&&!insideOffice&&!insidePassage&&!insideLibrary&&!insideLibraryPassage)return false;
- if(x>=-52.7&&x<=-48.1&&(z<4.45||z>7.95))return false;
- if(x>=-24.7&&x<=-21.1&&(z<4.45||z>7.95))return false;
- if(Math.abs(x-11.6)<.95&&(z<1.02||z>4.28))return false;
+ const inRoom=Object.values(ROOMS).some(({bounds:[x1,x2,z1,z2]})=>x>=x1+.7&&x<=x2-.7&&z>=z1+.7&&z<=z2-.7);
+ const inDoor=PORTALS.some(p=>p.axis==='x'?Math.abs(x-p.x)<=2&&Math.abs(z-p.z)<=p.width/2-.55:Math.abs(z-p.z)<=2&&Math.abs(x-p.x)<=p.width/2-.55);
+ if(!inRoom&&!inDoor)return false;
+ if(x<-24&&(x<-58.2||z<-39.3))return false;
  if(Math.hypot(x-27,z-1.2)<4.2)return false;
  if(obstacles.some(([x1,x2,z1,z2])=>x>x1&&x<x2&&z>z1&&z<z2))return false;
  return true;
+}
+// A short grid search keeps automatic room changes inside the actual doorways.
+export function findPath(start,target){
+ const step=.8,originX=-60,originZ=-42;
+ const cell=([x,z])=>[Math.round((x-originX)/step),Math.round((z-originZ)/step)];
+ const point=([x,z])=>[originX+x*step,originZ+z*step],key=([x,z])=>x+','+z;
+ const free=c=>{const [x,z]=point(c);return canStand(x,z);};
+ function nearest(p){const c=cell(p);if(free(c))return c;for(let r=1;r<5;r++)for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++){const n=[c[0]+dx,c[1]+dz];if(free(n))return n;}return null;}
+ const a=nearest([start.x,start.z]),b=nearest(target);if(!a||!b)return [];
+ const queue=[a],seen=new Map([[key(a),null]]),coords=new Map([[key(a),a]]);let head=0;
+ while(head<queue.length){const current=queue[head++],ck=key(current);if(ck===key(b)){const route=[];let at=ck;while(seen.get(at)!==null){route.push(point(coords.get(at)));at=seen.get(at);}route.reverse();if(canStand(...target))route.push([...target]);return route;}
+  for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]]){const n=[current[0]+dx,current[1]+dz],nk=key(n);if(seen.has(nk)||!free(n))continue;if(dx&&dz&&(!free([current[0]+dx,current[1]])||!free([current[0],current[1]+dz])))continue;seen.set(nk,ck);coords.set(nk,n);queue.push(n);}
+ }
+ return [];
 }
 export function moveCompanion(position,horizontal,vertical,angle,distance){
  const len=Math.hypot(horizontal,vertical);if(!len)return {...position};
