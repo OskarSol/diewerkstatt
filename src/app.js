@@ -1,4 +1,5 @@
 import { createWiki } from './wiki.js';
+import { createLearning } from './learning.js';
 import { createAgents } from './agents.js';
 import { createProjectFiles } from './project-files.js';
 import { createBrickWorld } from './world.js';
@@ -6,6 +7,7 @@ import { createBrickWorld } from './world.js';
 const $ = (id) => document.getElementById(id);
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const projects = {
+  enterprise: { title: 'Enterprise Architektur', description: 'Dein Lernplatz in der Bibliothek. Erkunde Ziele, Fähigkeiten, Systeme und ihr Zusammenspiel – eine kleine Einheit nach der anderen.', tags: ['Lernprojekt', 'Bibliothek'], prompt: 'Lass uns die nächste Lerneinheit für Enterprise Architektur starten.', reply: 'Dein Lernplatz ist bereit. Vier kleine Startübungen führen dich von den Zielen deines Beispiels bis zum nächsten konkreten Schritt. Der Lehrer zeigt dir, welche Einheit als Nächstes ansteht. Deine Notizen und dein Fortschritt bleiben in diesem Browser gespeichert.' },
   illuna: { title: 'Illuna', description: 'Deine Idee für Apps, die sich an Menschen anpassen. Ein Platz für Prototypen, neue Oberflächen und die nächste gute Frage.', tags: ['Personalisierung', 'Prototyp'], prompt: 'Was könnten wir als Nächstes für Illuna ausprobieren?', reply: 'Für Illuna hätte ich eine Idee: dieselbe kleine App für drei Menschen zeigen – mit anderer Sprache, Informationsdichte und Gestaltung. So wird Personalisierung sofort greifbar.\n\nDas ist eine vorbereitete Demo-Idee. Für ein echtes Gespräch können wir hier später dein KI-Backend anschließen.' },
   cloud: { title: 'Cloud Lab', description: 'Dein Büroplatz für Cloud-Architektur, Plattformen und kleine Experimente. Hier darf aus einer Skizze etwas Brauchbares werden.', tags: ['Azure', 'Architektur'], prompt: 'Lass uns eine Idee für mein Cloud Lab sammeln.', reply: 'Eine Idee fürs Cloud Lab: ein kleines Self-Service-Experiment. Ein Team beschreibt, was es bauen möchte – und bekommt einen verständlichen Vorschlag für die passende Plattform.\n\nIn dieser Demo öffne ich dazu deine Cloud-Station. Ich lese keine echten Cloud-Ressourcen aus.' },
   horizon27: { title: 'Horizon27', description: 'Dein Schreibtisch für Horizon27. Hier sammeln wir Ideen, offene Fragen und die nächsten Schritte.', tags: ['Ideen', 'Nächste Schritte'], prompt: 'Lass uns an Horizon27 arbeiten.', reply: 'Der Schreibtisch für Horizon27 ist bereit. Was möchtest du hier als Erstes festhalten: das Ziel, eine Idee oder den nächsten Schritt?\n\nDas ist eine vorbereitete Demo-Antwort. Projektdetails sind noch nicht hinterlegt.' },
@@ -26,6 +28,7 @@ const room = { rotate() {}, reset() {}, select() {}, pause() {} };
 function toast(text) { $('toast').textContent = text; $('toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { $('toast').hidden = true; }, 5600); }
 const projectFiles=createProjectFiles({toast});
 const encouragement={
+ enterprise:['Jede neue Verbindung macht das große Bild ein Stück klarer.','Zehn Minuten Neugier sind ein guter Anfang. Dein Lernplatz wartet.'],
  illuna:['Die nächste gute Idee darf erst mal ein kleiner Prototyp sein.','Baustein für Baustein: Mach Illuna heute ein Stück greifbarer.'],
  cloud:['Gute Architektur beginnt mit einer guten Frage.','Ein klarer nächster Schritt ist besser als zehn perfekte Diagramme. Na gut, neun.'],
  horizon27:['Der Horizont rückt näher, sobald du losgehst.','Heute reicht ein kleiner Schritt in Richtung Horizon27.'],
@@ -49,6 +52,7 @@ function selectProject(id, announce = false) {
   $('project-description').textContent = p.description;
   $('project-tags').replaceChildren(...p.tags.map(text => { const e = document.createElement('span'); e.textContent = text; return e; }));
   $('project-panel').hidden = false;
+  $('project-learn').hidden = id!=='enterprise';
   room.select(id);
   projectFiles.open(id);
   cheer(id);
@@ -61,7 +65,8 @@ function closeProject() {
   room.select(null);
 }
 const wiki=createWiki({room,toast,beforeOpen:()=>{agentUI.close(false);closeProject();}});
-const agentUI=createAgents({projects,room,closeProject,selectProject,paused:()=>paused});
+const agentUI=createAgents({projects,room,closeProject,selectProject,paused:()=>paused,toast});
+const learning=createLearning({room,toast,beforeOpen:()=>{wiki.close();agentUI.close(false);closeProject();}});
 document.querySelectorAll('[data-project]').forEach(el => el.addEventListener('click', () => selectProject(el.dataset.project)));
 $('close-project').addEventListener('click', () => { const prev = selectedProject; closeProject(); document.querySelector(`.project-tab[data-project="${prev}"]`)?.focus(); });
 $('project-chat').addEventListener('click', () => { if (selectedProject) { $('message').value = projects[selectedProject].prompt; updateInput(); $('message').focus(); if (innerWidth < 800) $('project-panel').hidden = true; } });
@@ -80,10 +85,11 @@ $('chat-toggle').addEventListener('click', () => setChatExpanded(!chatExpanded))
 function appendMessage(role, text) { const el = document.createElement('div'); el.className = `message ${role}`; el.textContent = text; $('chat-log').append(el); $('chat-toggle').classList.add('visible'); setChatExpanded(true); $('chat-log').scrollTop = $('chat-log').scrollHeight; return el; }
 function demoReply(text) {
   const q = text.toLowerCase();
+  if (/enterprise|lerneinheit|lernplatz|lehrer/.test(q)) {learning.open();return projects.enterprise.reply;}
   if (/bibliothek|wiki|wissen|graph/.test(q)) {wiki.open();return 'Willkommen in deiner Bibliothek! Die leuchtenden Datenpunkte verbinden deine Wiki-Einträge. Du kannst eigene Texte anlegen und miteinander verknüpfen. Aktuell sind Beispielwissen und lokale Einträge sichtbar; eine externe Datenbank ist noch nicht verbunden.';}
   if (/agent|roboter|team/.test(q)) {agentUI.open('nova');return 'Dein Testteam ist bereit: Nova für Illuna, Atlas fürs Cloud Lab, Scout für Horizon27, Echo für Personal Brand und Pico für Automations. Klick auf einen Roboter, um Projekt, Status und Demo-Ausgabe zu sehen. Noch sind keine echten Agenten oder Webhooks verbunden.';}
   if (/büro|buero/.test(q)) {closeProject();room.go('office');return 'Willkommen im Büro! Hier haben Illuna, Horizon27, Cloud Lab und Personal Brand ihre eigenen Schreibtische. Welches Projekt nehmen wir uns vor?';}
-  if (/werkhalle|zurück.*werkstatt|garage/.test(q)) {closeProject();room.go('workshop');return 'Zurück in die Werkhalle! Der BMW M2 und der Aston Martin warten schon. Welche deiner sieben Projektstationen nehmen wir uns vor?';}
+  if (/werkhalle|zurück.*werkstatt|garage/.test(q)) {closeProject();room.go('workshop');return 'Zurück in die Werkhalle! Der BMW M2 und der Aston Martin warten schon. Welche deiner acht Projektstationen nehmen wir uns vor?';}
   if (/hund|maltipoo|kurzhaar|kara|josie/.test(q)) {room.callDogs();return 'Das Empfangskomitee ist unterwegs! Josie, der kleine braune Maltipoo, und Kara, der schwarz-weiß gepunktete Deutsch Kurzhaar, drehen hier ihre Runden. Im Garten warten ihre eigenen Hundehütten. Klick sie an – dann kommen sie kurz zum Helfer.';}
   if (/personal\s*brand/.test(q)) { selectProject('brand'); return projects.brand.reply; }
   if (/automation/.test(q)) { selectProject('automations'); return projects.automations.reply; }
@@ -92,7 +98,7 @@ function demoReply(text) {
   if (/illuna|personalisier/.test(q)) { selectProject('illuna'); return projects.illuna.reply; }
   if (/cloud|azure|architektur|plattform/.test(q)) { selectProject('cloud'); return projects.cloud.reply; }
   if (/garten|pool|pflanz|terrasse/.test(q)) { selectProject('garden'); return projects.garden.reply; }
-  if (/projekt|werkbank|übersicht/.test(q)) return 'Sieben Stationen warten auf dich:\n\n✧ Illuna – Apps, die sich an Menschen anpassen.\n☁ Cloud Lab – Platz für Architektur und Experimente.\n◇ Horizon27 – Ideen und nächste Schritte.\n↗ Garten & Pool – Ideen für draußen.\n▦ die werkstatt – unsere 3D-Welt weiterbauen.\n✎ Personal Brand – Themen und Geschichten.\n⚙ Automations – Abläufe vereinfachen.\n\nKlick auf eine Station im Raum oder in der Projektliste. Womit legen wir los?';
+  if (/projekt|werkbank|übersicht/.test(q)) return 'Acht Stationen warten auf dich:\n\n✧ Illuna – Apps, die sich an Menschen anpassen.\n☁ Cloud Lab – Platz für Architektur und Experimente.\n◇ Horizon27 – Ideen und nächste Schritte.\n↗ Garten & Pool – Ideen für draußen.\n▦ die werkstatt – unsere 3D-Welt weiterbauen.\n✎ Personal Brand – Themen und Geschichten.\n⚙ Automations – Abläufe vereinfachen.\n▤ Enterprise Architektur – dein Lernplatz in der Bibliothek.\n\nKlick auf eine Station im Raum oder in der Projektliste. Womit legen wir los?';
   if (/idee|überrasch|inspir/.test(q)) { selectProject('illuna'); return 'Eine Idee, die zu dir passt: Was wäre, wenn diese Werkstatt selbst ein Illuna-Prototyp wäre?\n\nEin ruhiger Raum für konzentriertes Arbeiten. Ein verspielter Raum fürs Brainstorming. Und derselbe Helfer, der Sprache und Erklärungen anpasst.\n\nHier ist das eine vorbereitete Inspiration – aber als nächstes Experiment ziemlich passend, oder?'; }
   if (/hallo|hey|hi\b|wink/.test(q)) { waveUntil += 4; return 'Hey Oskar! Schön, dass du da bist. Ich bin dein kleiner Werkstatt-Helfer. Noch mit vorbereiteten Antworten, aber schon ziemlich motiviert. 😊\n\nFrag mich nach deinen Projekten oder einer Idee für Illuna.'; }
   return 'Ich habe deine Nachricht im Chat aufgenommen. In dieser HTML-Demo antworte ich mit vorbereiteten Beispielen; eine echte KI-Verbindung ist noch nicht eingerichtet.\n\nProbier „Zeig mir meine Projekte“, „Eine Idee für Illuna“ oder „Cloud Lab“. Die Projektstationen reagieren darauf.';
@@ -144,21 +150,22 @@ $('mic').addEventListener('click', () => { if (!recognition) { toast('Dein Brows
 $('speech-cancel').addEventListener('click', () => $('speech-dialog').close());
 $('speech-start').addEventListener('click', () => { speechApproved = true; $('speech-dialog').close(); startSpeech(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden && recognition && listening) recognition.stop(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('project-panel').hidden) closeProject(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !document.querySelector('dialog[open]') && !$('project-panel').hidden) closeProject(); });
 
 // A smooth isometric construction-brick diorama, including animated actors.
 createBrickWorld({
-  canvas: $('workshop'), room, agents:agentUI, wiki,
+  canvas: $('workshop'), room, agents:agentUI, wiki, learning,
   state: () => ({ paused, busy, listening }),
   selectProject,
   toast,
   onZone(zone) {
     wiki.zone(zone);
+    learning.zone(zone);
     document.querySelectorAll('[data-zone]').forEach(el => el.setAttribute('aria-pressed', String(el.dataset.zone === zone)));
     const labels={
       workshop:['01 / DIE WERKHALLE','die werkstatt','Platz zum Bauen und Ausprobieren.','Garage · Werkbänke · Automations','Mit ↑ ↓ ← → fliege ich los.'],
       office:['02 / DAS BÜRO','das büro','Vier Projekte. Ein Raum für gute Ideen.','Illuna · Horizon27 · Cloud Lab · Personal Brand','Willkommen im Büro. Welchen Gedanken bauen wir heute weiter?'],
-      library:['04 / DEIN WISSEN','die bibliothek','Ein Raum für alles, was du weißt.','Bücher · Verbindungen · neue Gedanken','Jede gute Verbindung beginnt mit einem Gedanken.'],
+      library:['04 / DEIN WISSEN','die bibliothek','Wissen verbinden. Neues lernen.','Bücher · Wissensgraph · Enterprise Architektur','Jede gute Verbindung beginnt mit einem Gedanken.'],
       garden:['03 / DRAUSSEN IM GRÜNEN','der garten','Pool, Pflanzen und ein bisschen Sonne.','Garten · Pool · Terrasse','Ab nach draußen. Die Hunde kommen mit!']
     }[zone];
     ['zone-eyebrow','zone-title','zone-caption','zone-description','avatar-note'].forEach((id,i)=>$(id).textContent=labels[i]);

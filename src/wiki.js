@@ -3,6 +3,8 @@ export function createWiki({room,toast,beforeOpen}){
  const $=id=>document.getElementById(id);
  let entries=validateKnowledge(demoKnowledge),selected=null,visible=true,rotating=true,editing=null,inLibrary=false,source='Beispielwissen';
  try{const saved=localStorage.getItem(WIKI_KEY);if(saved){entries=validateKnowledge(JSON.parse(saved));source='Lokal gespeichert';}}catch{toast('Gespeicherte Wiki-Daten konnten nicht geladen werden. Die Beispiele sind verfügbar.');}
+ // Add the requested learning project to older local libraries without changing their entries.
+ if(!entries.some(e=>e.id==='enterprise')&&entries.length<150){const seed=demoKnowledge.find(e=>e.id==='enterprise');entries.push({...seed,links:seed.links.filter(id=>entries.some(e=>e.id===id))});}
  const snapshot=()=>entries.map(e=>({...e,links:[...e.links]}));
  function commit(next,label='Lokal gespeichert'){
   const checked=validateKnowledge(next);

@@ -1,7 +1,8 @@
 export const WIKI_COLORS={Projekt:'#bba5ff',Wissen:'#74dfd8',Idee:'#ffd57d'};
 export const WIKI_KEY='werkstatt-wiki-v1';
 export const demoKnowledge=[
- {id:'werkstatt',title:'die werkstatt',kind:'Projekt',body:'Beispieleintrag · Deine räumliche Übersicht für Projekte, Wissen und kleine Helfer.\n\nIn dieser Bibliothek wird jeder Eintrag zu einem Datenpunkt. Verknüpfungen werden als Linien sichtbar.',links:['illuna','horizon27','cloud','brand','automations','garten']},
+ {id:'werkstatt',title:'die werkstatt',kind:'Projekt',body:'Beispieleintrag · Deine räumliche Übersicht für Projekte, Wissen und kleine Helfer.\n\nIn dieser Bibliothek wird jeder Eintrag zu einem Datenpunkt. Verknüpfungen werden als Linien sichtbar.',links:['illuna','horizon27','cloud','brand','automations','garten','enterprise']},
+ {id:'enterprise',title:'Enterprise Architektur',kind:'Projekt',body:'Dein Lernprojekt in der Bibliothek. Am eigenen Lernplatz warten ein Lehrer und vier Startübungen: Ziele & Kontext, Fähigkeiten & Abläufe, Systeme & Verbindungen sowie Zielbild & nächster Schritt. Notizen und Fortschritt bleiben in diesem Browser gespeichert.',links:['architektur','notizen']},
  {id:'illuna',title:'Illuna',kind:'Projekt',body:'Beispieleintrag · Hier kannst du dein Wissen rund um Illuna sammeln: Konzepte, Entscheidungen und Erkenntnisse aus Prototypen.',links:['prototypen','ideen']},
  {id:'horizon27',title:'Horizon27',kind:'Projekt',body:'Beispieleintrag · Platz für die Ziele, Gedanken und nächsten Schritte von Horizon27.',links:['ideen','notizen']},
  {id:'cloud',title:'Cloud Lab',kind:'Projekt',body:'Beispieleintrag · Ein Wissensort für Architektur, Plattformen und technische Experimente.',links:['architektur','automations']},

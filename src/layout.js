@@ -1,17 +1,20 @@
-// One physical plan, shared by the scene, navigation and collision detection.
+// Shared physical plan: floors, openings, navigation and furniture use these coordinates.
 export const ROOMS={
- library:{title:'Bibliothek',bounds:[-60,-24,-42,14],view:[-42,-14],home:[-34,3],span:[68,46]},
- office:{title:'Büro',bounds:[-22,12,-40.5,-15.5],view:[-5,-28],home:[-6.5,-20.8],span:[46,33]},
- workshop:{title:'Werkstatt',bounds:[-22,12,-13.5,11.5],view:[-5,-1],home:[-8.2,7.9],span:[46,34]},
- garden:{title:'Garten',bounds:[14,50,-42,14],view:[32,-14],home:[21,10.5],span:[68,44]}
+ library:{title:'Bibliothek',bounds:[-77,-33,-54,29],view:[-55,-12.5],home:[-40,9],span:[91,60]},
+ office:{title:'Büro',bounds:[-25,17,-53,-18],view:[-4,-35.5],home:[-3,-22.5],span:[59,42]},
+ workshop:{title:'Werkstatt',bounds:[-25,17,-7,28],view:[-4,10.5],home:[-8.2,14.9],span:[59,43]},
+ garden:{title:'Garten',bounds:[25,69,-54,29],view:[47,-12.5],home:[33,23],span:[91,59]}
 };
 export const PORTALS=[
- {id:'library-office',a:'library',b:'office',axis:'x',x:-23,z:-20.8,width:4.6},
- {id:'library-workshop',a:'library',b:'workshop',axis:'x',x:-23,z:6.2,width:4.6},
- {id:'office-garden',a:'office',b:'garden',axis:'x',x:13,z:-20.8,width:4.6},
- {id:'workshop-garden',a:'workshop',b:'garden',axis:'x',x:13,z:2.65,width:4.6},
- {id:'office-workshop',a:'office',b:'workshop',axis:'z',x:4.9,z:-14.5,width:4.6}
+ {id:'library-office',a:'library',b:'office',axis:'x',x:-29,z:-22.5,width:6,length:8},
+ {id:'library-workshop',a:'library',b:'workshop',axis:'x',x:-29,z:13.2,width:6,length:8},
+ {id:'office-garden',a:'office',b:'garden',axis:'x',x:21,z:-22.5,width:6,length:8},
+ {id:'workshop-garden',a:'workshop',b:'garden',axis:'x',x:21,z:9.65,width:6,length:8},
+ {id:'office-workshop',a:'office',b:'workshop',axis:'z',x:10,z:-12.5,width:6,length:11}
 ];
-export const officePoint=([x,z])=>[x+31.5,z-27];
+export const OFFICE_STATIONS={illuna:{x:-14,z:-43,color:'#b39be2'},cloud:{x:4,z:-43,color:'#77bddb'},horizon27:{x:-14,z:-31,color:'#80ccc4'},brand:{x:4,z:-31,color:'#e7a9c2'}};
+export const hallPoint=([x,z])=>[x,z+7];
+export const gardenPoint=([x,z])=>[25+(x-14)*44/36,-54+(z+42)*83/56];
+export const libraryPoint=([x,z])=>[-77+(x+60)*44/36,-54+(z+42)*83/56];
 export function zoneAt(x,z){return Object.entries(ROOMS).find(([,r])=>x>r.bounds[0]+.65&&x<r.bounds[1]-.65&&z>r.bounds[2]+.65&&z<r.bounds[3]-.65)?.[0]??null;}
 export const roomArea=id=>{const [x1,x2,z1,z2]=ROOMS[id].bounds;return(x2-x1)*(z2-z1);};

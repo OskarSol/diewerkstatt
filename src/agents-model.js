@@ -1,4 +1,4 @@
-import {officePoint} from './layout.js';
+import {hallPoint,gardenPoint,libraryPoint} from './layout.js';
 export const AGENT_SEEDS=[
  {id:'nova',name:'Nova',role:'Builder',projectId:'illuna',color:'#bba1ef',task:'Oberflächen-Ideen erkunden',steps:['Demo-Auftrag angenommen.','Drei Varianten für eine Oberfläche skizzieren.','Sprache und Informationsdichte vergleichen.','Entwurf bereit für deinen Blick.']},
  {id:'atlas',name:'Atlas',role:'Architect',projectId:'cloud',color:'#79cee5',task:'Architektur-Skizze vorbereiten',steps:['Demo-Auftrag angenommen.','Bausteine für eine Plattform sammeln.','Abhängigkeiten im Beispiel ordnen.','Skizze bereit zur gemeinsamen Prüfung.']},
@@ -7,10 +7,10 @@ export const AGENT_SEEDS=[
  {id:'pico',name:'Pico',role:'Automator',projectId:'automations',color:'#ffd06a',task:'Ablauf in Schritte zerlegen',steps:['Demo-Auftrag angenommen.','Auslöser und Ergebnis eines Beispielablaufs markieren.','Übergaben und mögliche Fehlerfälle notieren.','Ablaufskizze bereit. Noch keine Automation ausgeführt.']}
 ];
 export const STATUS_LABELS={idle:'Bereit',running:'Arbeitet',waiting:'Wartet auf dich',done:'Fertig',error:'Fehler'};
-export const projectRoom=id=>id==='garden'?'garden':['illuna','cloud','horizon27','brand'].includes(id)?'office':'workshop';
+export const projectRoom=id=>id==='enterprise'?'library':id==='garden'?'garden':['illuna','cloud','horizon27','brand'].includes(id)?'office':'workshop';
 // Fixed, separated docks per room keep agents away from passageways, even if
 // several are assigned to the same project by a future transport adapter.
-export const AGENT_DOCKS={office:[[-39.6,-6],[-28.6,-6],[-39.6,2.1],[-28.6,2.1],[-33.5,8.8]].map(officePoint),workshop:[[-17,6.5],[4.5,-8],[8,-1],[8,7.2],[-6.1,-6.2]],garden:[[21,6],[21,8.8],[33,11],[33,6],[42,9]]};
+export const AGENT_DOCKS={office:[[-9.9,-41.3],[8.1,-41.3],[-9.9,-29.3],[8.1,-29.3],[-2,-48]],workshop:[[-17,6.5],[4.5,-8],[8,-1],[8,7.2],[-6.1,-6.2]].map(hallPoint),garden:[[21,6],[21,8.8],[33,11],[33,6],[42,9]].map(gardenPoint),library:[[-35.5,-30],[-35.5,-26],[-30.5,-24],[-27,-22],[-35.5,-22]].map(libraryPoint)};
 export function createAgentStore(projectIds,now=()=>new Date().toISOString()){
  const agents=AGENT_SEEDS.map((seed,i)=>({...seed,index:i,status:'running',source:'demo',step:0,logs:[{at:now(),text:seed.steps[0]}]}));
  const validProjects=new Set(projectIds);let listener=()=>{};
